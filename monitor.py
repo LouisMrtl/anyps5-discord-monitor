@@ -48,10 +48,16 @@ def make_label(base):
 def progress_text(stats, base):
     done = stats.get(f"{base}.done")
     total = stats.get(f"{base}.total")
-    if done is not None or total is not None:
-        return f"{'—' if done is None else done}/{'—' if total is None else total}"
     percent = stats.get(f"{base}.percent")
-    return "—" if percent is None else f"{percent:g}%"
+
+    parts = []
+    if done is not None or total is not None:
+        parts.append(f"{'—' if done is None else done}/{'—' if total is None else total}")
+    if percent is not None:
+        pct = f"{percent:g}%"
+        parts.append(f"({pct})" if parts else pct)
+
+    return " ".join(parts) if parts else "—"
 
 def send_discord(previous, current, changed_bases):
     if not WEBHOOK_URL:
