@@ -8,7 +8,7 @@ PROGRESS_URL = "https://boykopovar.github.io/AnyPS5/progress.json"
 WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 STATE_FILE = Path("state/stats.json")
 STAT_KEYS = {"done", "total", "percent", "todo"}
-IGNORED = ("libkernel",)  # toute clé contenant ce texte (insensible à la casse) est ignorée
+IGNORED = ("libkernel", ".groups[")
 
 def fetch_json(url):
     request = urllib.request.Request(
