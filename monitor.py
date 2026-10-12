@@ -8,6 +8,7 @@ PROGRESS_URL = "https://boykopovar.github.io/AnyPS5/progress.json"
 WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 STATE_FILE = Path("state/stats.json")
 STAT_KEYS = {"done", "total", "percent", "todo"}
+IGNORED = ("libkernel",)  # toute clé contenant ce texte (insensible à la casse) est ignorée
 
 def fetch_json(url):
     request = urllib.request.Request(
@@ -21,17 +22,14 @@ def extract_stats(value, path="$"):
     """Keep only numeric progress fields, not the long lists of function names."""
     stats = {}
     if isinstance(value, dict):
-        label = value.get("name")
         for key, child in value.items():
             if key in STAT_KEYS and isinstance(child, (int, float)) and not isinstance(child, bool):
                 stats[f"{path}.{key}"] = child
             elif isinstance(child, (dict, list)):
-                child_path = f"{path}.{key}"
-                stats.update(extract_stats(child, child_path))
+                stats.update(extract_stats(child, f"{path}.{key}"))
     elif isinstance(value, list):
         for index, child in enumerate(value):
             if isinstance(child, dict):
-                # Use stable names for groups instead of list indexes when possible.
                 label = child.get("name")
                 item_path = f"{path}[{label}]" if label else f"{path}[{index}]"
                 stats.update(extract_stats(child, item_path))
@@ -39,20 +37,32 @@ def extract_stats(value, path="$"):
                 stats.update(extract_stats(child, f"{path}[{index}]"))
     return stats
 
-def fmt(value, key):
-    if key.endswith(".percent"):
-        return f"{value:g}%"
-    return str(value)
+def filter_ignored(stats):
+    return {k: v for k, v in stats.items()
+            if not any(word.lower() in k.lower() for word in IGNORED)}
 
-def send_discord(changes):
+def make_label(base):
+    label = base.removeprefix("$").lstrip(".")
+    return label.replace("libraries", "Bibliothèques").replace("shaders", "Shaders")
+
+def progress_text(stats, base):
+    done = stats.get(f"{base}.done")
+    total = stats.get(f"{base}.total")
+    if done is not None or total is not None:
+        return f"{'—' if done is None else done}/{'—' if total is None else total}"
+    percent = stats.get(f"{base}.percent")
+    return "—" if percent is None else f"{percent:g}%"
+
+def send_discord(previous, current, changed_bases):
     if not WEBHOOK_URL:
         raise RuntimeError("Le secret DISCORD_WEBHOOK_URL est absent.")
     lines = ["**AnyPS5 — progression mise à jour**", "[Ouvrir le suivi](https://boykopovar.github.io/AnyPS5/)"]
-    for key, old, new in changes[:35]:
-        label = key.replace("$.", "").replace(".libraries", " · Bibliothèques").replace(".shaders", " · Shaders")
-        lines.append(f"• `{label}` : **{fmt(old, key)} → {fmt(new, key)}**")
-    if len(changes) > 35:
-        lines.append(f"… et {len(changes) - 35} autre(s) statistique(s) modifiée(s).")
+    for base in changed_bases[:35]:
+        old = progress_text(previous, base)
+        new = progress_text(current, base)
+        lines.append(f"• `{make_label(base)}` : **{old} → {new}**")
+    if len(changed_bases) > 35:
+        lines.append(f"… et {len(changed_bases) - 35} autre(s) catégorie(s) modifiée(s).")
     content = "\n".join(lines)
     # Discord's message content limit is 2000 characters.
     if len(content) > 1950:
@@ -70,7 +80,7 @@ def send_discord(changes):
 
 def main():
     current_json = fetch_json(PROGRESS_URL)
-    current = extract_stats(current_json)
+    current = filter_ignored(extract_stats(current_json))
     if not current:
         raise RuntimeError("Aucune statistique reconnue dans progress.json ; état non modifié.")
 
@@ -80,18 +90,20 @@ def main():
         print(f"Initialisation terminée : {len(current)} statistiques enregistrées, aucune notification envoyée.")
         return
 
-    previous = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    previous = filter_ignored(json.loads(STATE_FILE.read_text(encoding="utf-8")))
     keys = sorted(set(previous) | set(current))
-    changes = [(key, previous.get(key, "—"), current.get(key, "—"))
-               for key in keys if previous.get(key) != current.get(key)]
+    changed_keys = [k for k in keys if previous.get(k) != current.get(k)]
 
-    if not changes:
+    if not changed_keys:
         print("Aucun changement de statistique.")
         return
 
-    send_discord(changes)
+    # On regroupe par catégorie (tout ce qui précède le dernier ".done" / ".total" / ...)
+    changed_bases = sorted({k.rpartition(".")[0] for k in changed_keys})
+
+    send_discord(previous, current, changed_bases)
     STATE_FILE.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    print(f"{len(changes)} statistique(s) modifiée(s) ; notification Discord envoyée.")
+    print(f"{len(changed_bases)} catégorie(s) modifiée(s) ; notification Discord envoyée.")
 
 if __name__ == "__main__":
     main()
