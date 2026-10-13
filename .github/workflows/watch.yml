@@ -2,7 +2,6 @@ name: AnyPS5 progress watcher
 
 on:
   schedule:
-    # 2 tentatives par heure, hors des minutes surchargées (:00, :30)
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
 
