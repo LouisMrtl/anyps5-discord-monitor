@@ -2,7 +2,7 @@ name: AnyPS5 progress watcher
 
 on:
   schedule:
-    # Une fois par heure, à la minute 17 (UTC).
+    # Secours : GitHub peut retarder ou sauter ces exécutions.
     - cron: "17 * * * *"
   workflow_dispatch:
 
@@ -18,7 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          ref: main
 
       - name: Vérifier les statistiques et notifier Discord si besoin
         env:
@@ -32,5 +34,6 @@ jobs:
           git add state/stats.json
           if ! git diff --cached --quiet; then
             git commit -m "Update AnyPS5 progress baseline"
+            git pull --rebase origin main
             git push
           fi
