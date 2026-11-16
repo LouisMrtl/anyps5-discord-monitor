@@ -1,7 +1,7 @@
 {
-  "$.libraries.done": 16384,
+  "$.libraries.done": 16417,
   "$.libraries.total": 39450,
-  "$.libraries.percent": 41.53,
+  "$.libraries.percent": 41.61,
   "$.shaders.done": 1166,
   "$.shaders.total": 1166,
   "$.shaders.percent": 100.0,
@@ -63,11 +63,5 @@
   "$.shader_source.profiles.gfx1013.forms[23].total": 119,
   "$.shader_source.profiles.gfx1013.forms[24].total": 22,
   "$.shader_source.profiles.gfx1013.forms[25].total": 190,
-  "$.shader_source.profiles.gfx1013.forms[26].total": 190,
-  "$.open_pr_progress.baseline.done": 16384,
-  "$.open_pr_progress.baseline.total": 39450,
-  "$.open_pr_progress.baseline.percent": 41.53,
-  "$.open_pr_progress.potential.done": 17519,
-  "$.open_pr_progress.potential.total": 43800,
-  "$.open_pr_progress.potential.percent": 40.0
+  "$.shader_source.profiles.gfx1013.forms[26].total": 190
 }
